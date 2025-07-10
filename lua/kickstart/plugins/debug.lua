@@ -23,6 +23,7 @@ return {
 
     -- Add your own debuggers here
     'leoluz/nvim-dap-go',
+    'mxsdev/nvim-dap-vscode-js',
   },
   keys = {
     -- Basic debugging keymaps, feel free to change to your liking!
@@ -32,6 +33,12 @@ return {
         require('dap').continue()
       end,
       desc = 'Debug: Start/Continue',
+    },
+    {
+      '<F17>',
+      function()
+        require('dap').terminate()
+      end,
     },
     {
       '<F1>',
@@ -95,6 +102,7 @@ return {
       ensure_installed = {
         -- Update this to ensure that you have the debuggers for the langs you want
         'delve',
+        'js',
       },
     }
 
@@ -144,5 +152,75 @@ return {
         detached = vim.fn.has 'win32' == 0,
       },
     }
+    -- VS Code JS debugger setup
+    require('dap-vscode-js').setup {
+      node_path = 'node',
+      debugger_cmd = { 'js-debug-adapter' },
+      adapters = { 'pwa-node' },
+    }
+
+    dap.adapters['pwa-node'] = {
+      type = 'server',
+      host = 'localhost',
+      port = '${port}',
+      executable = {
+        command = 'node',
+        args = { vim.fn.stdpath 'data' .. '/mason/packages/js-debug-adapter/js-debug/src/dapDebugServer.js', '${port}' },
+      },
+    }
+    -- Always launch current file with `node <file>`
+    dap.configurations.javascript = {
+      {
+        type = 'pwa-node',
+        request = 'launch',
+        name = 'Launch current .js file',
+        program = '${file}', -- debug the open buffer
+        cwd = vim.fn.getcwd(),
+        console = 'integratedTerminal',
+      },
+    }
+
+    dap.configurations.rust = {
+      {
+        name = 'Debug rLox',
+        type = 'codelldb',
+        request = 'launch',
+        program = function()
+          return vim.fn.getcwd() .. '/target/debug/rlox'
+        end,
+        cwd = '${workspaceFolder}',
+        stopOnEntry = false,
+        args = { 'test.lox' },
+      },
+    }
+
+    -- Customize DAP breakpoint icons
+    vim.fn.sign_define('DapBreakpoint', {
+      text = '🛑',
+      texthl = 'DapBreakpoint',
+      linehl = '', -- no full-line highlight
+      numhl = '', -- no line-number highlight
+    })
+
+    vim.fn.sign_define('DapBreakpointCondition', {
+      text = '🔶',
+      texthl = 'DapBreakpointCondition',
+      linehl = '',
+      numhl = '',
+    })
+
+    vim.fn.sign_define('DapLogPoint', {
+      text = '✏️',
+      texthl = 'DapLogPoint',
+      linehl = '',
+      numhl = '',
+    })
+
+    vim.fn.sign_define('DapStopped', {
+      text = '⭐',
+      texthl = 'DapStopped',
+      linehl = 'Visual',
+      numhl = 'DapStopped',
+    })
   end,
 }
