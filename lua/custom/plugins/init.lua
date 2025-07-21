@@ -2,4 +2,17 @@
 --  I promise not to create any merge conflicts in this directory :)
 --
 -- See the kickstart.nvim README for more information
-return {}
+return {
+  -- Smooth scrolling
+  {
+    'karb94/neoscroll.nvim',
+    opts = {
+      mappings = { '<C-u>', '<C-d>', '<C-b>', '<C-f>' },
+      easing_function = 'quadratic',
+      -- Scrolling speed
+      duration_multiplier = 0.5,
+      -- cursor_scrolls_alone = false,
+      respect_scrolloff = true,
+    },
+  },
+}
