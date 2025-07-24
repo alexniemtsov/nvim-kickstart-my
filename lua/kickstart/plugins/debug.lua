@@ -180,13 +180,33 @@ return {
       },
     }
 
+    dap.configurations.typescript = {
+      {
+        name = 'Launch TS (ts-node)',
+        type = 'pwa-node',
+        request = 'launch',
+        runtimeArgs = { '-r', 'ts-node/register/transpile-only' },
+        -- runtimeExecutable = 'ts-node',
+        runtimeExecutable = 'ts-node',
+        args = { '${file}' },
+        cwd = vim.fn.getcwd(),
+        sourceMaps = true,
+        skipFiles = { '<node_internals>/**', '${workspaceFolder}/node_modules/**' },
+        resolveSourceMapLocations = {
+          '${workspaceFolder}/**',
+          '!**/node_modules/**',
+        },
+        console = 'integratedTerminal',
+      },
+    }
+
     dap.configurations.rust = {
       {
         name = 'Debug rLox',
         type = 'codelldb',
         request = 'launch',
         program = function()
-          return vim.fn.getcwd() .. '/target/debug/rlox'
+          return vim.fn.getcwd() .. '/target/debug/rlox' -- Todo: remove hardcoded project
         end,
         cwd = '${workspaceFolder}',
         stopOnEntry = false,
@@ -201,21 +221,21 @@ return {
       linehl = '', -- no full-line highlight
       numhl = '', -- no line-number highlight
     })
-
-    vim.fn.sign_define('DapBreakpointCondition', {
-      text = '🔶',
-      texthl = 'DapBreakpointCondition',
-      linehl = '',
-      numhl = '',
-    })
-
-    vim.fn.sign_define('DapLogPoint', {
-      text = '✏️',
-      texthl = 'DapLogPoint',
-      linehl = '',
-      numhl = '',
-    })
-
+    --
+    -- vim.fn.sign_define('DapBreakpointCondition', {
+    --   text = '🔶',
+    --   texthl = 'DapBreakpointCondition',
+    --   linehl = '',
+    --   numhl = '',
+    -- })
+    --
+    -- vim.fn.sign_define('DapLogPoint', {
+    --   text = '✏️',
+    --   texthl = 'DapLogPoint',
+    --   linehl = '',
+    --   numhl = '',
+    -- })
+    --
     vim.fn.sign_define('DapStopped', {
       text = '⭐',
       texthl = 'DapStopped',
