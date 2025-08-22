@@ -15,4 +15,8 @@ return {
       respect_scrolloff = true,
     },
   },
+  {
+    'danymat/neogen',
+    config = true,
+  },
 }

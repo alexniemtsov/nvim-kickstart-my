@@ -671,8 +671,8 @@ require('lazy').setup({
       --  - settings (table): Override the default settings passed when initializing the server.
       --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
       local servers = {
-        -- clangd = {},
-        -- gopls = {},
+        clangd = {},
+        gopls = {},
         -- pyright = {},
 
         -- Rust
@@ -773,6 +773,14 @@ require('lazy').setup({
     },
     opts = {
       notify_on_error = false,
+      -- formatters = {
+      --   php_cs_fixer = {
+      --     inherit = true,
+      --     -- force PSR12 rules even without a config file
+      --     append_args = { '--rules=@PSR12' },
+      --     cwd = require('conform.util').root_file { '.git', 'composer.json' },
+      --   },
+      -- },
       format_on_save = function(bufnr)
         -- Disable "format_on_save lsp_fallback" for languages that don't
         -- have a well standardized coding style. You can add additional
@@ -789,6 +797,7 @@ require('lazy').setup({
       end,
       formatters_by_ft = {
         lua = { 'stylua' },
+        php = { 'phpcbf' },
         -- Conform can also run multiple formatters sequentially
         -- python = { "isort", "black" },
         --
@@ -824,6 +833,9 @@ require('lazy').setup({
             'rafamadriz/friendly-snippets',
             config = function()
               require('luasnip.loaders.from_vscode').lazy_load()
+              require('luasnip.loaders.from_vscode').lazy_load {
+                paths = { vim.fn.stdpath 'config' .. '/snippets' },
+              }
             end,
           },
         },
@@ -910,6 +922,9 @@ require('lazy').setup({
         styles = {
           comments = { italic = false }, -- Disable italics in comments
         },
+        on_colors = function(colors)
+          colors.comment = colors.orange
+        end,
       }
 
       -- Load the colorscheme here.
@@ -1032,6 +1047,8 @@ require('lazy').setup({
     },
   },
 })
+
+require 'custom.keymap'
 
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et

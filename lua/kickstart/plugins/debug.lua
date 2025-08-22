@@ -200,17 +200,66 @@ return {
       },
     }
 
+    -- local function create_rust_dap_config(name)
+    --   return {
+    --     name = 'Debug (cargo build)',
+    --     type = 'codelldb',
+    --     request = 'launch',
+    --     program = function()
+    --       vim.fn.system 'cargo build'
+    --       local metaJson = vim.fn.system 'cargo metadata --format-version 1 --no-deps'
+    --       local meta = vim.fn.json_decode(metaJson)
+    --       local pkg = meta.packages[1]
+    --       local targetDir = meta.target_directory
+    --       return string.format('%s/debug/%s', targetDir, pkg.name)
+    --     end,
+    --     cwd = '${workspaceFolder}',
+    --     stopOnEntry = false,
+    --     args = {},
+    --   }
+    -- end
+    -- local metaJson = vim.fn.system 'cargo metadata --format-version 1 --no-deps'
+    -- local meta = vim.fn.json_decode(metaJson)
+    -- local targets = {}
+    -- for i, target in ipairs(meta.packages[1].targets) do
+    --   if vim.tbl_contains(target.kind or {}, 'bin') then
+    --     table.insert(targets, create_rust_dap_config 'Binary Debug')
+    --     -- table.insert(dap.configurations.rust, create_rust_dap_config 'Binary Debug')
+    --   end
+    --
+    --   if vim.tbl_contains(target.kind or {}, 'test') then
+    --     table.insert(targets, create_rust_dap_config 'Test Debug')
+    --     -- table.insert(dap.configurations.rust, create_rust_dap_config 'Test Debug ')
+    --   end
+    -- end
+    --
+    -- local compiler_messages = vim.fn.systemlist { 'cargo', 'test', '--no-run', '--message-format=json' }
+    --
+    -- for _, msgJson in ipairs(compiler_messages) do
+    --   local msg = vim.fn.json_decode(msgJson)
+    --
+    --   if msg.reason == 'compiler-artifact' then
+    --     vim.print(msg)
+    --   end
+    -- end
+    -- vim.print(targets)
+
     dap.configurations.rust = {
       {
-        name = 'Debug rLox',
+        name = 'Debug (cargo build)',
         type = 'codelldb',
         request = 'launch',
         program = function()
-          return vim.fn.getcwd() .. '/target/debug/rlox' -- Todo: remove hardcoded project
+          vim.fn.system 'cargo build'
+          local metaJson = vim.fn.system 'cargo metadata --format-version 1 --no-deps'
+          local meta = vim.fn.json_decode(metaJson)
+          local pkg = meta.packages[1]
+          local targetDir = meta.target_directory
+          return string.format('%s/debug/%s', targetDir, pkg.name)
         end,
         cwd = '${workspaceFolder}',
         stopOnEntry = false,
-        args = { 'test.lox' },
+        args = {},
       },
     }
 
