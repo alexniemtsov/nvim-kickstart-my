@@ -773,14 +773,11 @@ require('lazy').setup({
     },
     opts = {
       notify_on_error = false,
-      -- formatters = {
-      --   php_cs_fixer = {
-      --     inherit = true,
-      --     -- force PSR12 rules even without a config file
-      --     append_args = { '--rules=@PSR12' },
-      --     cwd = require('conform.util').root_file { '.git', 'composer.json' },
-      --   },
-      -- },
+      formatters = {
+        pint = {
+          timeout_ms = 10000, -- Increase timeout to 10 seconds (default is usually 1-2 seconds)
+        },
+      },
       format_on_save = function(bufnr)
         -- Disable "format_on_save lsp_fallback" for languages that don't
         -- have a well standardized coding style. You can add additional
@@ -790,14 +787,14 @@ require('lazy').setup({
           return nil
         else
           return {
-            timeout_ms = 500,
+            timeout_ms = 10000,
             lsp_format = 'fallback',
           }
         end
       end,
       formatters_by_ft = {
         lua = { 'stylua' },
-        php = { 'phpcbf' },
+        php = { 'pint' },
         -- Conform can also run multiple formatters sequentially
         -- python = { "isort", "black" },
         --
@@ -847,31 +844,26 @@ require('lazy').setup({
     --- @type blink.cmp.Config
     opts = {
       keymap = {
-        -- 'default' (recommended) for mappings similar to built-in completions
-        --   <c-y> to accept ([y]es) the completion.
-        --    This will auto-import if your LSP supports it.
-        --    This will expand snippets if the LSP sent a snippet.
-        -- 'super-tab' for tab to accept
-        -- 'enter' for enter to accept
-        -- 'none' for no mappings
-        --
-        -- For an understanding of why the 'default' preset is recommended,
-        -- you will need to read `:help ins-completion`
-        --
-        -- No, but seriously. Please read `:help ins-completion`, it is really good!
-        --
-        -- All presets have the following mappings:
-        -- <tab>/<s-tab>: move to right/left of your snippet expansion
-        -- <c-space>: Open menu or open docs if already open
-        -- <c-n>/<c-p> or <up>/<down>: Select next/previous item
-        -- <c-e>: Hide menu
-        -- <c-k>: Toggle signature help
-        --
-        -- See :h blink-cmp-config-keymap for defining your own keymap
         preset = 'default',
 
-        -- For more advanced Luasnip keymaps (e.g. selecting choice nodes, expansion) see:
-        --    https://github.com/L3MON4D3/LuaSnip?tab=readme-ov-file#keymaps
+        -- Custom <C-y> that handles both Copilot and blink completion
+        ['<C-y>'] = {
+          function(cmp)
+            -- Check if Copilot has a suggestion
+            if vim.fn.exists('*copilot#GetDisplayedSuggestion') == 1 then
+              local suggestion = vim.fn['copilot#GetDisplayedSuggestion']()
+              if suggestion.text ~= '' then
+                -- Accept the copilot suggestion
+                vim.api.nvim_feedkeys(vim.fn['copilot#Accept'](''), 'n', false)
+                return true -- Don't run next command
+              end
+            end
+            -- No Copilot suggestion, let blink handle it
+            return false -- Run next command (blink's accept)
+          end,
+          'accept',
+          'fallback'
+        },
       },
 
       appearance = {

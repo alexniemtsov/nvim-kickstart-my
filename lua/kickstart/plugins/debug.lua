@@ -244,24 +244,43 @@ return {
     -- end
     -- vim.print(targets)
 
-    dap.configurations.rust = {
-      {
-        name = 'Debug (cargo build)',
-        type = 'codelldb',
-        request = 'launch',
-        program = function()
-          vim.fn.system 'cargo build'
-          local metaJson = vim.fn.system 'cargo metadata --format-version 1 --no-deps'
-          local meta = vim.fn.json_decode(metaJson)
-          local pkg = meta.packages[1]
-          local targetDir = meta.target_directory
-          return string.format('%s/debug/%s', targetDir, pkg.name)
-        end,
-        cwd = '${workspaceFolder}',
-        stopOnEntry = false,
-        args = {},
-      },
-    }
+    local function generate_rust_configurations()
+      local configs = {}
+      local metaJson = vim.fn.system 'cargo metadata --format-version 1 --no-deps'
+      if vim.v.shell_error ~= 0 then
+        return {}
+      end
+
+      local meta = vim.fn.json_decode(metaJson)
+      if not meta or not meta.packages or #meta.packages == 0 then
+        return {}
+      end
+
+      for _, pkg in ipairs(meta.packages) do
+        for _, target in ipairs(pkg.targets) do
+          if vim.tbl_contains(target.kind or {}, 'bin') then
+            table.insert(configs, {
+              name = string.format('Debug %s (cargo build)', target.name),
+              type = 'codelldb',
+              request = 'launch',
+              program = function()
+                vim.fn.system 'cargo build'
+                local currentMetaJson = vim.fn.system 'cargo metadata --format-version 1 --no-deps'
+                local currentMeta = vim.fn.json_decode(currentMetaJson)
+                local targetDir = currentMeta.target_directory
+                return string.format('%s/debug/%s', targetDir, target.name)
+              end,
+              cwd = '${workspaceFolder}',
+              stopOnEntry = false,
+              args = {},
+            })
+          end
+        end
+      end
+      return configs
+    end
+
+    dap.configurations.rust = generate_rust_configurations()
 
     -- Customize DAP breakpoint icons
     vim.fn.sign_define('DapBreakpoint', {
