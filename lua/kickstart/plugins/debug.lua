@@ -38,6 +38,7 @@ return {
       '<F17>',
       function()
         require('dap').terminate()
+        require('dapui').close()
       end,
     },
     {
@@ -103,6 +104,9 @@ return {
         -- Update this to ensure that you have the debuggers for the langs you want
         'delve',
         'js',
+        'js-debug-adapter',
+        'netcoredbg',
+        'php-debug-adapter',
       },
     }
 
@@ -126,6 +130,26 @@ return {
           disconnect = '⏏',
         },
       },
+      layouts = {
+        {
+          elements = {
+            { id = 'scopes', size = 0.25 },
+            { id = 'breakpoints', size = 0.25 },
+            { id = 'stacks', size = 0.25 },
+            { id = 'watches', size = 0.25 },
+          },
+          size = 40,
+          position = 'left',
+        },
+        {
+          elements = {
+            { id = 'repl', size = 0.5 },
+            { id = 'console', size = 0.5 },
+          },
+          size = 10,
+          position = 'bottom',
+        },
+      },
     }
 
     -- Change breakpoint icons
@@ -140,9 +164,59 @@ return {
     --   vim.fn.sign_define(tp, { text = icon, texthl = hl, numhl = hl })
     -- end
 
-    dap.listeners.after.event_initialized['dapui_config'] = dapui.open
-    dap.listeners.before.event_terminated['dapui_config'] = dapui.close
-    dap.listeners.before.event_exited['dapui_config'] = dapui.close
+    -- Open/close DAP UI automatically with custom behavior for PHP
+    dap.listeners.after.event_initialized['dapui_config'] = function(session)
+      pcall(dapui.open)
+      -- For PHP, close only the console element after UI is fully opened
+      -- if session and session.config and session.config.type == 'php' then
+      --   vim.defer_fn(function()
+      --     pcall(dapui.close, 'console')
+      --   end, 200)
+      -- end
+    end
+    dap.listeners.before.event_terminated['dapui_config'] = function()
+      vim.schedule(function()
+        pcall(dapui.close)
+      end)
+    end
+    dap.listeners.before.event_exited['dapui_config'] = function()
+      vim.schedule(function()
+        pcall(dapui.close)
+      end)
+    end
+
+    -- PHP Auto-trigger: Run Docker command when PHP debugging starts and capture output to REPL
+    dap.listeners.after.event_initialized['php_docker_trigger'] = function(session)
+      if session.config.type == 'php' and session.config.dockerCommand then
+        vim.defer_fn(function()
+          vim.fn.jobstart(session.config.dockerCommand, {
+            detach = false,
+            on_stdout = function(_, data)
+              if data then
+                vim.schedule(function()
+                  for _, line in ipairs(data) do
+                    if line ~= '' then
+                      require('dap.repl').append(line)
+                    end
+                  end
+                end)
+              end
+            end,
+            on_stderr = function(_, data)
+              if data then
+                vim.schedule(function()
+                  for _, line in ipairs(data) do
+                    if line ~= '' then
+                      require('dap.repl').append('[stderr] ' .. line)
+                    end
+                  end
+                end)
+              end
+            end,
+          })
+        end, 100)
+      end
+    end
 
     -- Install golang specific config
     require('dap-go').setup {
@@ -199,6 +273,90 @@ return {
         console = 'integratedTerminal',
       },
     }
+    dap.adapters['php'] = {
+      type = 'executable',
+      command = 'node',
+      args = { vim.fn.stdpath 'data' .. '/mason/packages/php-debug-adapter/extension/out/phpDebug.js' },
+    }
+    dap.configurations.php = {
+      {
+        name = 'Listen for Xdebug (no auto-run)',
+        type = 'php',
+        request = 'launch',
+        port = 9003,
+        pathMappings = {
+          ['/var/www'] = '/Users/alex/work/projects/nano_reality_srv',
+        },
+        log = false,
+        xdebugSettings = {
+          max_children = 128,
+          max_data = 512,
+          max_depth = 3,
+        },
+      },
+      {
+        name = 'Remote Debugging Session',
+        type = 'php',
+        request = 'launch',
+        port = 51864,
+        pathMappings = {
+          ['/var/www/sandbox/conditions'] = '/Users/alex/work/projects/nano_reality_srv',
+        },
+        log = false,
+        xdebugSettings = {
+          max_children = 128,
+          max_data = 512,
+          max_depth = 3,
+        },
+      },
+      {
+        name = 'Debug: yii test/alex',
+        type = 'php',
+        request = 'launch',
+        port = 9003,
+        pathMappings = {
+          ['/var/www'] = '/Users/alex/work/projects/nano_reality_srv',
+        },
+        log = false,
+        xdebugSettings = {
+          max_children = 128,
+          max_data = 512,
+          max_depth = 3,
+        },
+        dockerCommand = 'cd /Users/alex/work/projects/nano_reality_srv && docker-compose exec -T -e XDEBUG_SESSION=1 php-fpm php yii test/alex',
+      },
+      {
+        name = 'Debug: Custom Yii Command',
+        type = 'php',
+        request = 'launch',
+        port = 9003,
+        pathMappings = {
+          ['/var/www'] = '/Users/alex/work/projects/nano_reality_srv',
+        },
+        log = false,
+        xdebugSettings = {
+          max_children = 128,
+          max_data = 512,
+          max_depth = 3,
+        },
+        dockerCommand = function()
+          local command = vim.fn.input 'Yii command (e.g., test/alex): '
+          if command and command ~= '' then
+            return 'cd /Users/alex/work/projects/nano_reality_srv && docker-compose exec -T -e XDEBUG_SESSION=1 php-fpm php yii ' .. command
+          end
+          return nil
+        end,
+      },
+    }
+
+    -- Resolve dockerCommand if it's a function before the listener fires
+    local original_run = dap.run
+    dap.run = function(config, opts)
+      if config.dockerCommand and type(config.dockerCommand) == 'function' then
+        config.dockerCommand = config.dockerCommand()
+      end
+      original_run(config, opts)
+    end
 
     -- local function create_rust_dap_config(name)
     --   return {
@@ -270,7 +428,8 @@ return {
                 local targetDir = currentMeta.target_directory
                 return string.format('%s/debug/%s', targetDir, target.name)
               end,
-              cwd = '${workspaceFolder}',
+              -- cwd = '${workspaceFolder}',
+              cwd = vim.fn.getcwd(),
               stopOnEntry = false,
               args = {},
             })

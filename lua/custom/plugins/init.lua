@@ -50,6 +50,11 @@ return {
     config = function()
       -- Optional: Configure copilot settings
       vim.g.copilot_no_tab_map = true
+      vim.keymap.set('i', '<C-h>', 'copilot#Accept("\\<CR>")', {
+        expr = true,
+        replace_keycodes = false,
+      })
+
       vim.g.copilot_assume_mapped = true
       -- vim.keymap.set('i', '<C-y>', function()
       --   if vim.fn['copilot#GetDisplayedSuggestion']().text ~= '' then
@@ -83,7 +88,7 @@ return {
       local install_path = vim.fn.stdpath 'data' .. '/lazy/nvim-dbee'
       require('dbee').setup {
         sources = {
-          require('dbee.sources').MemorySource:new({
+          require('dbee.sources').MemorySource:new {
             {
               name = 'Snowflake Production',
               type = 'snowflake',
@@ -91,7 +96,7 @@ return {
               -- No database or schema specified - access everything
               url = '{{ env "SNOWFLAKE_USER" }}:{{ env "SNOWFLAKE_PASSWORD" }}@{{ env "SNOWFLAKE_ACCOUNT" }}.snowflakecomputing.com:443?warehouse={{ env "SNOWFLAKE_WAREHOUSE" }}',
             },
-          }),
+          },
         },
         extra_helpers = {},
         drawer = {
@@ -101,5 +106,22 @@ return {
         install_path = install_path,
       }
     end,
+  },
+
+  {
+    {
+      'mistweaverco/kulala.nvim',
+      keys = {
+        { '<leader>Xs', desc = 'Send request' },
+        { '<leader>Xa', desc = 'Send all requests' },
+        { '<leader>Xb', desc = 'Open scratchpad' },
+      },
+      ft = { 'http', 'rest' },
+      opts = {
+        global_keymaps = true,
+        global_keymaps_prefix = '<leader>X',
+        kulala_keymaps_prefix = '',
+      },
+    },
   },
 }

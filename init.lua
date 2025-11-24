@@ -377,6 +377,7 @@ require('lazy').setup({
         end,
       },
       { 'nvim-telescope/telescope-ui-select.nvim' },
+      { 'nvim-telescope/telescope-media-files.nvim' },
 
       -- Useful for getting pretty icons, but requires a Nerd Font.
       { 'nvim-tree/nvim-web-devicons', enabled = vim.g.have_nerd_font },
@@ -406,14 +407,122 @@ require('lazy').setup({
       require('telescope').setup {
         -- You can put your default mappings / updates / etc. in here
         --  All the info you're looking for is in `:help telescope.setup()`
-        --
-        -- defaults = {
-        --   mappings = {
-        --     i = { ['<c-enter>'] = 'to_fuzzy_refine' },
-        --   },
-        -- },
-        -- pickers = {}
+        defaults = {
+          -- Hide Unity + build artifacts (massive perf win)
+          file_ignore_patterns = {
+            '^%.git/',
+            '^Library/',
+            '^Logs/',
+            '^Temp/',
+            '^Obj/',
+            '^obj/',
+            '^bin/',
+            '^Build/',
+            '^ProjectSettings/',
+            '^UserSettings/',
+            '^Packages/.*%.cache/',
+            '^%.vs/',
+            '^%.idea/',
+          },
+
+          -- Tell ripgrep exactly what to skip, *including hidden files* except .git
+          vimgrep_arguments = {
+            'rg',
+            '--color=never',
+            '--no-heading',
+            '--with-filename',
+            '--line-number',
+            '--column',
+            '--smart-case',
+            '--hidden',
+            '--follow',
+            '-g',
+            '!.git/**',
+            '-g',
+            '!Library/**',
+            '-g',
+            '!Logs/**',
+            '-g',
+            '!Temp/**',
+            '-g',
+            '!Obj/**',
+            '-g',
+            '!obj/**',
+            '-g',
+            '!bin/**',
+            '-g',
+            '!Build/**',
+            '-g',
+            '!ProjectSettings/**',
+            '-g',
+            '!UserSettings/**',
+            '-g',
+            '!Packages/**/.cache/**',
+            '-g',
+            '!.vs/**',
+            '-g',
+            '!.idea/**',
+            '-g',
+            '!target/**',
+          },
+
+          -- UI/CPU niceties
+          path_display = { 'truncate' },
+          dynamic_preview_title = true,
+          preview = { filesize_limit = 1, timeout = 100 }, -- MB, ms
+        },
+        pickers = {
+          -- Make file finding use `fd` (faster than builtin find)
+          find_files = {
+            find_command = {
+              'fd',
+              '--type',
+              'f',
+              '--hidden',
+              '--follow',
+              '--strip-cwd-prefix',
+              '--no-ignore',
+              '--exclude',
+              '.git',
+              '--exclude',
+              'Library',
+              '--exclude',
+              'Logs',
+              '--exclude',
+              'Temp',
+              '--exclude',
+              'Obj',
+              '--exclude',
+              'obj',
+              '--exclude',
+              'bin',
+              '--exclude',
+              'Build',
+              '--exclude',
+              'ProjectSettings',
+              '--exclude',
+              'UserSettings',
+              '--exclude',
+              '.vs',
+              '--exclude',
+              '.idea',
+              '--exclude',
+              'vendor',
+              '--exclude',
+              'node_modules',
+              '--exclude',
+              'target',
+            },
+          },
+        },
         extensions = {
+          media_files = {
+            -- filetypes whitelist
+            -- defaults to {"png", "jpg", "mp4", "webm", "pdf"}
+            filetypes = { 'png', 'webp', 'jpg', 'jpeg' },
+            -- find command (defaults to `fd`)
+            find_cmd = 'rg',
+          },
           ['ui-select'] = {
             require('telescope.themes').get_dropdown(),
           },
@@ -423,6 +532,7 @@ require('lazy').setup({
       -- Enable Telescope extensions if they are installed
       pcall(require('telescope').load_extension, 'fzf')
       pcall(require('telescope').load_extension, 'ui-select')
+      pcall(require('telescope').load_extension, 'media_files')
 
       -- See `:help telescope.builtin`
       local builtin = require 'telescope.builtin'
@@ -436,6 +546,7 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
       vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
       vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
+      -- vim.keymap.set('n', '<leader>sm', require('telescope').extensions.media_files.media_files(), { desc = '[S]earch [M]edia Files' })
 
       -- Slightly advanced example of overriding default behavior and theme
       vim.keymap.set('n', '<leader>/', function()
@@ -459,6 +570,10 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>sn', function()
         builtin.find_files { cwd = vim.fn.stdpath 'config' }
       end, { desc = '[S]earch [N]eovim files' })
+
+      vim.keymap.set('n', '<leader>sm', function()
+        require('telescope').extensions.media_files.media_files()
+      end, { desc = '[S]earch [M]media files' })
     end,
   },
 
@@ -679,7 +794,12 @@ require('lazy').setup({
         rust_analyzer = {},
 
         -- C#
-        csharp_ls = {},
+        omnisharp = {
+          cmd = { 'omnisharp' },
+          enable_import_completion = true,
+          enable_roslyn_analyzers = true,
+          organize_imports_on_format = true,
+        },
 
         -- PHP
         phpactor = {},
@@ -844,26 +964,26 @@ require('lazy').setup({
     --- @type blink.cmp.Config
     opts = {
       keymap = {
-        preset = 'default',
+        preset = 'default'
 
         -- Custom <C-y> that handles both Copilot and blink completion
-        ['<C-y>'] = {
-          function(cmp)
-            -- Check if Copilot has a suggestion
-            if vim.fn.exists('*copilot#GetDisplayedSuggestion') == 1 then
-              local suggestion = vim.fn['copilot#GetDisplayedSuggestion']()
-              if suggestion.text ~= '' then
-                -- Accept the copilot suggestion
-                vim.api.nvim_feedkeys(vim.fn['copilot#Accept'](''), 'n', false)
-                return true -- Don't run next command
-              end
-            end
-            -- No Copilot suggestion, let blink handle it
-            return false -- Run next command (blink's accept)
-          end,
-          'accept',
-          'fallback'
-        },
+        -- ['<C-y>'] = {
+        --   function(cmp)
+        --     -- Check if Copilot has a suggestion
+        --     if vim.fn.exists '*copilot#GetDisplayedSuggestion' == 1 then
+        --       local suggestion = vim.fn['copilot#GetDisplayedSuggestion']()
+        --       if suggestion.text ~= '' then
+        --         -- Accept the copilot suggestion
+        --         vim.api.nvim_feedkeys(vim.fn['copilot#Accept'] '', 'n', false)
+        --         return true -- Don't run next command
+        --       end
+        --     end
+        --     -- No Copilot suggestion, let blink handle it
+        --     return false -- Run next command (blink's accept)
+        --   end,
+          -- 'accept',
+          -- 'fallback',
+        -- },
       },
 
       appearance = {
