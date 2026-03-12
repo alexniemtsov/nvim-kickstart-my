@@ -785,6 +785,9 @@ require('lazy').setup({
       --  - capabilities (table): Override fields in capabilities. Can be used to disable certain LSP features.
       --  - settings (table): Override the default settings passed when initializing the server.
       --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
+      -- Ensure .NET SDK is in PATH for OmniSharp
+      vim.env.PATH = '/opt/homebrew/bin:' .. vim.env.PATH
+
       local servers = {
         clangd = {},
         gopls = {},
@@ -795,10 +798,28 @@ require('lazy').setup({
 
         -- C#
         omnisharp = {
-          cmd = { 'omnisharp' },
-          enable_import_completion = true,
-          enable_roslyn_analyzers = true,
-          organize_imports_on_format = true,
+          cmd = {
+            vim.fn.expand('~/.local/share/nvim/mason/packages/omnisharp/OmniSharp'),
+            '--languageserver',
+            '--hostPID',
+            tostring(vim.fn.getpid()),
+          },
+          -- Use omnisharp.json in project root for detailed config
+          -- Increase timeouts for large Unity projects
+          flags = {
+            debounce_text_changes = 150,
+          },
+          init_options = {
+            -- Tell OmniSharp this is a Unity project
+            enableEditorConfigSupport = true,
+            enableRoslynAnalyzers = false,
+            organizeImportsOnFormat = false,
+            enableImportCompletion = false,
+          },
+          on_attach = function(client, bufnr)
+            -- Disable semantic tokens for better performance
+            client.server_capabilities.semanticTokensProvider = nil
+          end,
         },
 
         -- PHP
@@ -964,7 +985,7 @@ require('lazy').setup({
     --- @type blink.cmp.Config
     opts = {
       keymap = {
-        preset = 'default'
+        preset = 'default',
 
         -- Custom <C-y> that handles both Copilot and blink completion
         -- ['<C-y>'] = {
@@ -981,8 +1002,8 @@ require('lazy').setup({
         --     -- No Copilot suggestion, let blink handle it
         --     return false -- Run next command (blink's accept)
         --   end,
-          -- 'accept',
-          -- 'fallback',
+        -- 'accept',
+        -- 'fallback',
         -- },
       },
 

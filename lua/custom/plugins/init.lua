@@ -72,41 +72,7 @@ return {
   },
 
   -- Database client
-  {
-    'kndndrj/nvim-dbee',
-    dependencies = {
-      'MunifTanjim/nui.nvim',
-    },
-    build = function()
-      -- Install tries to automatically detect the install method.
-      -- if it fails, try calling it with one of these parameters:
-      --    "curl", "wget", "bitsadmin", "go"
-      require('dbee').install()
-    end,
-    cmd = { 'Dbee', 'DbeeToggle', 'DbeeExecute' }, -- Lazy load only when called
-    config = function()
-      local install_path = vim.fn.stdpath 'data' .. '/lazy/nvim-dbee'
-      require('dbee').setup {
-        sources = {
-          require('dbee.sources').MemorySource:new {
-            {
-              name = 'Snowflake Production',
-              type = 'snowflake',
-              -- Use environment variables for security
-              -- No database or schema specified - access everything
-              url = '{{ env "SNOWFLAKE_USER" }}:{{ env "SNOWFLAKE_PASSWORD" }}@{{ env "SNOWFLAKE_ACCOUNT" }}.snowflakecomputing.com:443?warehouse={{ env "SNOWFLAKE_WAREHOUSE" }}',
-            },
-          },
-        },
-        extra_helpers = {},
-        drawer = {
-          disable_help = false,
-        },
-        -- Specify the binary path
-        install_path = install_path,
-      }
-    end,
-  },
+  -- TODO: Find a better plugin for this
 
   {
     {
@@ -123,5 +89,17 @@ return {
         kulala_keymaps_prefix = '',
       },
     },
+  },
+
+  -- Markdown preview
+  {
+    'toppair/peek.nvim',
+    event = { 'VeryLazy' },
+    build = 'deno task --quiet build:fast',
+    config = function()
+      require('peek').setup { theme = 'dark' }
+      vim.api.nvim_create_user_command('PeekOpen', require('peek').open, {})
+      vim.api.nvim_create_user_command('PeekClose', require('peek').close, {})
+    end,
   },
 }
